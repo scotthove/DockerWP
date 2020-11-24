@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  wp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wordpress:latest # https://hub.docker.com/_/wordpress/
+    container_name: wordpress
+    restart: always
+    ports:
+      - ${IP}:80:80 # change ip if required
+    volumes:
+      - ./config/php.conf.ini:/usr/local/etc/php/conf.d/conf.ini
+      - ./wp-app:/var/www/html # Full wordpress project
+      - ./wp-plugins/:/var/www/html/wp-content/plugins/ # Suite of standard Wordpress plugins
+      - ./repo/${REPO}/${THEMENAME}/:/var/www/html/wp-content/themes/${THEMENAME} # Theme development
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: "${DB_NAME}"
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: "${DB_ROOT_PASSWORD}"
+      WORDPRESS_TABLE_PREFIX: "wp_"
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME','http://127.0.0.1/');
+        define('WP_SITEURL','http://127.0.0.1/');
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:latest # mysql https://hub.docker.com/_/mysql/ - or mariadb https://hub.docker.com/_/mariadb
+    container_name: maria-db
+    restart: always
+    ports:
+      - ${IP}:3306:3306 # change ip if required
+    command: [
+        '--default_authentication_plugin=mysql_native_password',
+        '--character-set-server=utf8mb4',
+        '--collation-server=utf8mb4_unicode_ci'
+    ]
+    volumes:
+      - ./wp-data/db:/docker-entrypoint-initdb.d
+      - db_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+
+  wpcli:
+    image: wordpress:cli
+    container_name: wp-cli
+    volumes:
+      - ./wp-app:/var/www/html
+      - ./wp-plugins/:/var/www/html/wp-content/plugins/
+      - ./repo/${REPO}/${THEMENAME}/:/var/www/html/wp-content/themes/${THEMENAME}
+      - ./config/php.conf.ini:/usr/local/etc/php/conf.d/conf.ini
+    depends_on:
+      - db
+      - wp
+    # The below sleeps for 10 seconds to allow wp-cli to connect to database, then installs our suite of plugins. Some plugins like Gravity Forms and All In One SEO Pro are not available through wp-cli. Once these load, they will appear in your wp-plugins directory
+    command: >
+      /bin/bash -c '
+      sleep 10;
+      wp core update;
+      wp plugin install akismet --activate;
+      wp plugin list;
+      '
+
+  pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: php-myadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+    ports:
+      - ${IP}:8080:80
+    depends_on:
+      - db
+
+  cypress:
+    image: "cypress/included:5.4.0"
+    container_name: cypress
+    depends_on:
+      - db
+      - wp
+    environment:
+      - CYPRESS_baseUrl=http://wordpress
+    working_dir: /e2e
+    volumes:
+      - ./e2e:/e2e
+
+volumes:
+  db_data:
+  wp:

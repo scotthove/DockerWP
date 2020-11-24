@@ -1,5 +1,5 @@
 # Docker Wordpress Local Build Environment
-This is a repository meant for dropping source-controlled Wordpress themes into and running on Docker in a local development environment. Specifically we use Docker Compose. This repository is based on the repository  at [github.com/nezhar/wordpress-docker-compose] (https://github.com/nezhar/wordpress-docker-compose) with MariaDB and a container for Cypress.
+This is a repository meant for dropping source-controlled Wordpress themes into and running on Docker in a local development environment. Specifically we use Docker Compose. This repository is based on the repository  at [github.com/nezhar/wordpress-docker-compose](https://github.com/nezhar/wordpress-docker-compose) with MariaDB and a container for Cypress.
 
 ## Installation
 1. Download and unzip this repository onto your local machine and make it the root of your IDE project.
